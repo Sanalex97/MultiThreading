@@ -1,33 +1,37 @@
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
+package HW1;
+
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.Callable;
+import java.util.concurrent.*;
 
-public class Server implements Runnable{
+public class Server {
 
     private ServerSocket serverSocket;
+    private  ExecutorService threadPool = Executors.newFixedThreadPool(64);
 
     public Server(ServerSocket serverSocket) {
         this.serverSocket = serverSocket;
     }
 
-    @Override
-    public void run() {
+    public void startServer() {
+
         while (true) {
             try {
                 Socket socket = serverSocket.accept();
-                ClientHandler clientHandler = new ClientHandler(socket);
-                Callable<ClientHandler> myCallable = new MyCa
-                new Thread(clientHandler).start();
+                handleConnection(socket);
 
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
     }
+
+    private void handleConnection(Socket socket){
+        ClientHandler clientHandler = new ClientHandler(socket);
+        threadPool.submit(clientHandler, "OK");
+    }
+
 
 }
 

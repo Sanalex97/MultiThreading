@@ -1,16 +1,19 @@
+package HW1;
+
 import java.io.*;
 import java.net.ServerSocket;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Main {
     public static void main(String[] args) throws IOException {
         final var validPaths = List.of("/index.html", "/spring.svg", "/spring.png", "/resources.html", "/styles.css", "/app.js", "/links.html", "/forms.html", "/classic.html", "/events.html", "/events.js");
 
         Server server = new Server(new ServerSocket(9999));
-        new Thread(server).start();
+        server.startServer();
+
+
 
 /*
         try (final var serverSocket = new ServerSocket(9999)) {
