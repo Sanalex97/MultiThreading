@@ -71,29 +71,13 @@ public class ClientHandler implements Runnable {
                 String path = requestLine[1].split("\\?")[0];
 
                 String paramQueryString = requestLine[1].split("\\?")[1];
+                HashMap<String, List<String>> queryParams = getQueryParams(paramQueryString);
 
 
                 if (!path.startsWith("/")) {
                     badRequest(out);
                     continue;
                 }
-
-                HashMap<String, List<String>> queryParams = new HashMap<>();
-                List<NameValuePair> queryStringParams = URLEncodedUtils.parse(paramQueryString, StandardCharsets.UTF_8);
-                for (NameValuePair queryStringParam : queryStringParams) {
-
-                    String[] arrQueryParams = queryStringParam.toString().split("=");
-
-                    List<String> listValue = queryParams.get(arrQueryParams[0]);
-
-                    if (listValue == null) {
-                        listValue = new ArrayList<>();
-                    }
-                    listValue.add(arrQueryParams[1]);
-
-                    queryParams.put(arrQueryParams[0], listValue);
-                }
-
 
                 Request request = new Request(method, path, queryParams);
 
@@ -116,6 +100,25 @@ public class ClientHandler implements Runnable {
                 e.printStackTrace();
             }
         }
+    }
+
+    private static HashMap<String, List<String>> getQueryParams(String paramQueryString) {
+        HashMap<String, List<String>> queryParams = new HashMap<>();
+        List<NameValuePair> queryStringParams = URLEncodedUtils.parse(paramQueryString, StandardCharsets.UTF_8);
+        for (NameValuePair queryStringParam : queryStringParams) {
+
+            String[] arrQueryParams = queryStringParam.toString().split("=");
+
+            List<String> listValue = queryParams.get(arrQueryParams[0]);
+
+            if (listValue == null) {
+                listValue = new ArrayList<>();
+            }
+            listValue.add(arrQueryParams[1]);
+
+            queryParams.put(arrQueryParams[0], listValue);
+        }
+        return queryParams;
     }
 
     private static int indexOf(byte[] array, byte[] target, int start, int max) {
