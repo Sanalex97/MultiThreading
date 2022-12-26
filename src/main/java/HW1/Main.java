@@ -18,7 +18,7 @@ public class Main {
         Server server = new Server(new ServerSocket(9999));
 
 
-        server.addHandler("GET", "/messages", (request, out) -> {
+        server.addHandler("GET", "/", (request, out) -> {
             out.write((
                     "HTTP/1.1 200 OK\r\n" +
                             "Content-Length: 0\r\n" +
@@ -30,7 +30,7 @@ public class Main {
         });
 
 
-        server.addHandler("POST", "/messages", (request, out) -> {
+        server.addHandler("POST", "/", (request, out) -> {
             out.write((
                     "HTTP/1.1 200 OK\r\n" +
                             "Content-Length: 0\r\n" +

@@ -49,15 +49,15 @@ public class ClientHandler implements Runnable {
     public void run() {
         while (!clientSocket.isClosed()) {
             try {
-                final int limit = 4096;
+                int limit = 4096;
 
                 in.mark(limit);
-                final byte[] buffer = new byte[limit];
-                final int read = in.read(buffer);
+                byte[] buffer = new byte[limit];
+                int read = in.read(buffer);
 
                 // ищем request line
-                final var requestLineDelimiter = new byte[]{'\r', '\n'};
-                final var requestLineEnd = indexOf(buffer, requestLineDelimiter, 0, read);
+                byte[] requestLineDelimiter = new byte[]{'\r', '\n'};
+                int requestLineEnd = indexOf(buffer, requestLineDelimiter, 0, read);
 
                 if (requestLineEnd == -1) {
                     badRequest(out);
@@ -65,22 +65,24 @@ public class ClientHandler implements Runnable {
                 }
 
                 // читаем request line
-                final var requestLine = new String(Arrays.copyOf(buffer, requestLineEnd)).split(" ");
+                String[] requestLine = new String(Arrays.copyOf(buffer, requestLineEnd)).split(" ");
 
-                final String method = requestLine[0];
-                final String paramQueryString = requestLine[1];
+                String method = requestLine[0];
+                String path = requestLine[1].split("\\?")[0];
+
+                String paramQueryString = requestLine[1].split("\\?")[1];
 
 
-                if (!paramQueryString.startsWith("/")) {
+                if (!path.startsWith("/")) {
                     badRequest(out);
                     continue;
                 }
 
                 HashMap<String, List<String>> queryParams = new HashMap<>();
-                List<NameValuePair> queryStringParams = URLEncodedUtils.parse(requestLine[1], StandardCharsets.UTF_8);
-                for (int i = 0; i < queryStringParams.size(); i++) {
+                List<NameValuePair> queryStringParams = URLEncodedUtils.parse(paramQueryString, StandardCharsets.UTF_8);
+                for (NameValuePair queryStringParam : queryStringParams) {
 
-                    String[] arrQueryParams = queryStringParams.get(i).toString().split("=");
+                    String[] arrQueryParams = queryStringParam.toString().split("=");
 
                     List<String> listValue = queryParams.get(arrQueryParams[0]);
 
@@ -92,14 +94,13 @@ public class ClientHandler implements Runnable {
                     queryParams.put(arrQueryParams[0], listValue);
                 }
 
-                Request request = new Request(method, queryParams);
+
+                Request request = new Request(method, path, queryParams);
 
                 System.out.println("Query параметры из request: " + request.getQueryParams());
 
-
                 synchronized (Server.handlers) {
                     try {
-                        String path = getPath(request);
 
                         if (method.equals("GET")) {
                             Server.handlers.get(request.getMethod()).get(path).handle(request, out);
@@ -115,23 +116,6 @@ public class ClientHandler implements Runnable {
                 e.printStackTrace();
             }
         }
-    }
-
-    private static String getPath(Request request) {
-        String path = null;
-        for (String key :
-                request.getQueryParams().keySet()) {
-
-            if (key.charAt(0) == '/') {
-                path = key;
-                break;
-            }
-        }
-
-        assert path != null;
-        path = path.split("=")[0].replace("?", "");
-
-        return path;
     }
 
     private static int indexOf(byte[] array, byte[] target, int start, int max) {
