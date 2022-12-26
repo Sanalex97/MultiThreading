@@ -71,7 +71,7 @@ public class ClientHandler implements Runnable {
                 String path = requestLine[1].split("\\?")[0];
 
                 String paramQueryString = requestLine[1].split("\\?")[1];
-                HashMap<String, List<String>> queryParams = getQueryParams(paramQueryString);
+                HashMap<String, List<String>> queryParams = getParams(paramQueryString);
 
 
                 if (!path.startsWith("/")) {
@@ -81,7 +81,43 @@ public class ClientHandler implements Runnable {
 
                 Request request = new Request(method, path, queryParams);
 
-                System.out.println("Query параметры из request: " + request.getQueryParams());
+                // ищем заголовки
+                byte[] headersDelimiter = new byte[]{'\r', '\n', '\r', '\n'};
+                int headersStart = requestLineEnd + requestLineDelimiter.length;
+                int headersEnd = indexOf(buffer, headersDelimiter, headersStart, read);
+                if (headersEnd == -1) {
+                    badRequest(out);
+                    continue;
+                }
+
+                // отматываем на начало буфера
+                in.reset();
+                // пропускаем requestLine
+                in.skip(headersStart);
+
+                byte[] headersBytes = in.readNBytes(headersEnd - headersStart);
+                List<String> headers = Arrays.asList(new String(headersBytes).split("\r\n"));
+                System.out.println(headers);
+
+                // для GET тела нет
+                if (!method.equals("GET")) {
+                    in.skip(headersDelimiter.length);
+                    // вычитываем Content-Length, чтобы прочитать body
+                    Optional<String> contentLength = extractHeader(headers, "Content-Length");
+                    if (contentLength.isPresent()) {
+                        int length = Integer.parseInt(contentLength.get());
+                        byte[] bodyBytes = in.readNBytes(length);
+
+                        String body = new String(bodyBytes);
+                        HashMap<String, List<String>> bodyParams = getParams(body);
+
+                        request.setBodyParams(bodyParams);
+
+                        System.out.println("Тело " + body);
+                        System.out.println("Параметры тела" + bodyParams);
+                    }
+                }
+
 
                 synchronized (Server.handlers) {
                     try {
@@ -102,9 +138,9 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private static HashMap<String, List<String>> getQueryParams(String paramQueryString) {
+    private static HashMap<String, List<String>> getParams(String params) {
         HashMap<String, List<String>> queryParams = new HashMap<>();
-        List<NameValuePair> queryStringParams = URLEncodedUtils.parse(paramQueryString, StandardCharsets.UTF_8);
+        List<NameValuePair> queryStringParams = URLEncodedUtils.parse(params, StandardCharsets.UTF_8);
         for (NameValuePair queryStringParam : queryStringParams) {
 
             String[] arrQueryParams = queryStringParam.toString().split("=");
@@ -114,11 +150,25 @@ public class ClientHandler implements Runnable {
             if (listValue == null) {
                 listValue = new ArrayList<>();
             }
-            listValue.add(arrQueryParams[1]);
+
+            try {
+                listValue.add(arrQueryParams[1]);
+            } catch (ArrayIndexOutOfBoundsException e) {
+                continue;
+            }
+
 
             queryParams.put(arrQueryParams[0], listValue);
         }
         return queryParams;
+    }
+
+    private static Optional<String> extractHeader(List<String> headers, String header) {
+        return headers.stream()
+                .filter(o -> o.startsWith(header))
+                .map(o -> o.substring(o.indexOf(" ")))
+                .map(String::trim)
+                .findFirst();
     }
 
     private static int indexOf(byte[] array, byte[] target, int start, int max) {
