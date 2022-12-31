@@ -11,9 +11,9 @@ import java.util.concurrent.*;
 
 public class Server {
 
-    private ServerSocket serverSocket;
-    private ExecutorService threadPool = Executors.newFixedThreadPool(64);
-    public static final Map<String, Map<String, Handler>> handlers = new HashMap<>();
+    private final ServerSocket serverSocket;
+    private final ExecutorService threadPool = Executors.newFixedThreadPool(64);
+    public static final Map<String, Map<String, Handler>> handlers = new ConcurrentHashMap<>();
 
     public Server(ServerSocket serverSocket) {
         this.serverSocket = serverSocket;
@@ -38,11 +38,11 @@ public class Server {
     }
 
 
-    public void addHandler(String get, String s, Handler handler) {
-        System.out.println(s);
-        Map<String, Handler> handlerMap = new HashMap<>();
-        handlerMap.put(s, handler);
-        handlers.put(get, handlerMap);
+    public void addHandler(String method, String path, Handler handler) {
+        if (!handlers.containsKey(method)) {
+            handlers.put(method, new ConcurrentHashMap<>());
+        }
+        handlers.get(method).put(path, handler);
     }
 
 

@@ -1,11 +1,18 @@
 package HW1;
 
+import org.apache.commons.fileupload.*;
+import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.http.NameValuePair;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.http.protocol.RequestContent;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.Socket;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
@@ -49,6 +56,8 @@ public class ClientHandler implements Runnable {
     public void run() {
         while (!clientSocket.isClosed()) {
             try {
+                System.out.println(Thread.currentThread().getName());
+
                 int limit = 4096;
 
                 in.mark(limit);
@@ -79,7 +88,9 @@ public class ClientHandler implements Runnable {
                     continue;
                 }
 
-                Request request = new Request(method, path, queryParams);
+
+
+
 
                 // ищем заголовки
                 byte[] headersDelimiter = new byte[]{'\r', '\n', '\r', '\n'};
@@ -97,8 +108,10 @@ public class ClientHandler implements Runnable {
 
                 byte[] headersBytes = in.readNBytes(headersEnd - headersStart);
                 List<String> headers = Arrays.asList(new String(headersBytes).split("\r\n"));
-                System.out.println(headers);
 
+                Request request = new Request(method, path, queryParams, headers);
+                //System.out.println(headers);
+//mapacancaren
                 // для GET тела нет
                 if (!method.equals("GET")) {
                     in.skip(headersDelimiter.length);
@@ -109,12 +122,15 @@ public class ClientHandler implements Runnable {
                         byte[] bodyBytes = in.readNBytes(length);
 
                         String body = new String(bodyBytes);
+
                         HashMap<String, List<String>> bodyParams = getParams(body);
 
-                        request.setBodyParams(bodyParams);
+                        request.setBodyParams(body);
 
-                        System.out.println("Тело " + body);
-                        System.out.println("Параметры тела" + bodyParams);
+                        request.getParts();
+
+                      /*  System.out.println("Тело " + body);
+                        System.out.println("Параметры тела" + bodyParams);*/
                     }
                 }
 
@@ -134,6 +150,8 @@ public class ClientHandler implements Runnable {
                 }
             } catch (IOException e) {
                 e.printStackTrace();
+            } catch (FileUploadException e) {
+                throw new RuntimeException(e);
             }
         }
     }
@@ -141,6 +159,8 @@ public class ClientHandler implements Runnable {
     private static HashMap<String, List<String>> getParams(String params) {
         HashMap<String, List<String>> queryParams = new HashMap<>();
         List<NameValuePair> queryStringParams = URLEncodedUtils.parse(params, StandardCharsets.UTF_8);
+
+
         for (NameValuePair queryStringParam : queryStringParams) {
 
             String[] arrQueryParams = queryStringParam.toString().split("=");
