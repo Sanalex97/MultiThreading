@@ -5,35 +5,34 @@ import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.RequestContext;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
-import org.apache.commons.fileupload.servlet.ServletRequestContext;
-import org.apache.http.protocol.RequestContent;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class Request implements RequestContext {
     private String method;
     private String path;
-    private String body;
     private List<String> headers;
+    private String body;
     private HashMap<String, List<String>> queryParams;
 
     private HashMap<String, List<String>> bodyParams;
 
-    //list<String>headers, body,
 
-
-    public Request(String method, String path, HashMap<String, List<String>> queryParams, List<String > headers) {
+    public Request(String method, String path, HashMap<String, List<String>> queryParams, List<String> headers) {
         this.method = method;
         this.path = path;
         this.queryParams = queryParams;
         this.headers = headers;
     }
 
-    public void setBodyParams(String body) {
+    public Request(String method, String path, List<String> headers, String body) {
+        this.method = method;
+        this.path = path;
+        this.headers = headers;
         this.body = body;
     }
 
@@ -71,11 +70,11 @@ public class Request implements RequestContext {
 
     public Map<String, List<String>> getParts() throws FileUploadException {
         Map<String, List<String>> allParts = new HashMap<>();
-        System.out.println(this);
-      //  DiskFileItemFactory factory = new DiskFileItemFactory();
-        System.out.println(ServletFileUpload.isMultipartContent(this));
+
         if (ServletFileUpload.isMultipartContent(this)) {
+            System.out.println(this);
             List<FileItem> items = new ServletFileUpload(new DiskFileItemFactory()).parseRequest(this);
+
             Iterator<FileItem> iter = items.iterator();
 
             while (iter.hasNext()) {
@@ -107,21 +106,38 @@ public class Request implements RequestContext {
 
     @Override
     public String getCharacterEncoding() {
-        return null;
+        return "UTF_8";
     }
 
     @Override
     public String getContentType() {
-        return null;
+        String result = null;
+        for (String header :
+                headers) {
+            if (header.contains("Content-Type")) {
+                String[] bufPartsHeader = header.split(":");
+                result = bufPartsHeader[1].trim();
+                break;
+            }
+        }
+        return result;
     }
 
     @Override
     public int getContentLength() {
+       /* for (String header :
+                headers) {
+            if (header.contains("Content-Length")) {
+                String[] bufPartsHeader = header.split(":");
+                return Integer.parseInt(bufPartsHeader[1]);
+            }
+        }
+        */
         return 0;
     }
 
     @Override
     public InputStream getInputStream() throws IOException {
-        return null;
+        return new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8));
     }
 }

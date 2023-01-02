@@ -1,20 +1,13 @@
 package HW1;
 
 import org.apache.commons.fileupload.*;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.http.NameValuePair;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.client.utils.URLEncodedUtils;
-import org.apache.http.protocol.RequestContent;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.Socket;
-import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -89,9 +82,6 @@ public class ClientHandler implements Runnable {
                 }
 
 
-
-
-
                 // ищем заголовки
                 byte[] headersDelimiter = new byte[]{'\r', '\n', '\r', '\n'};
                 int headersStart = requestLineEnd + requestLineDelimiter.length;
@@ -109,9 +99,7 @@ public class ClientHandler implements Runnable {
                 byte[] headersBytes = in.readNBytes(headersEnd - headersStart);
                 List<String> headers = Arrays.asList(new String(headersBytes).split("\r\n"));
 
-                Request request = new Request(method, path, queryParams, headers);
-                //System.out.println(headers);
-//mapacancaren
+                Request request = null;
                 // для GET тела нет
                 if (!method.equals("GET")) {
                     in.skip(headersDelimiter.length);
@@ -123,25 +111,20 @@ public class ClientHandler implements Runnable {
 
                         String body = new String(bodyBytes);
 
-                        HashMap<String, List<String>> bodyParams = getParams(body);
-
-                        request.setBodyParams(body);
+                        request = new Request(method, path, headers, body);
 
                         request.getParts();
 
-                      /*  System.out.println("Тело " + body);
-                        System.out.println("Параметры тела" + bodyParams);*/
                     }
                 }
 
 
                 synchronized (Server.handlers) {
                     try {
-
-                        if (method.equals("GET")) {
-                            Server.handlers.get(request.getMethod()).get(path).handle(request, out);
-                        } else if (method.equals("POST")) {
-                            Server.handlers.get(request.getMethod()).get(path).handle(request, out);
+                        if (request != null) {
+                            if (method.equals("POST")) {
+                                Server.handlers.get(request.getMethod()).get(path).handle(request, out);
+                            }
                         }
 
                     } catch (NullPointerException ex) {
